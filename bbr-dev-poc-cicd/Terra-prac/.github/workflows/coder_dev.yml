@@ -1,0 +1,129 @@
+# ============================================================
+# Terraform CI - DEV Environment
+# ============================================================
+# - Pull Request → Terraform Plan (validation only)
+# - Merge to main → Terraform Apply (governed execution)
+# - Uses self-hosted GitHub runner
+# - Authenticates via Azure OIDC (Managed Identity)
+# ============================================================
+ 
+name: Terraform CI - Dev
+ 
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - Terra-prac/environments/dev/**
+  push:
+    branches:
+      - main
+    paths:
+      - Terra-prac/environments/dev/**
+ 
+# ------------------------------------------------------------
+# Azure authentication via OIDC
+# ------------------------------------------------------------
+env:
+  ARM_USE_OIDC: true
+  ARM_USE_AZUREAD: true
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+ 
+# ------------------------------------------------------------
+# Default execution location
+# ------------------------------------------------------------
+defaults:
+  run:
+    shell: bash
+    working-directory: Terra-prac/environments/dev/
+ 
+jobs:
+  # ==========================================================
+  # Terraform PLAN - PR Validation
+  # ==========================================================
+  terraform-plan:
+    name: Terraform Plan (PR Validation)
+    runs-on: [self-hosted, linux]
+ 
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+ 
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+ 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+ 
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        continue-on-error: true
+ 
+      - name: Terraform Init
+        run: terraform init
+ 
+      - name: Terraform Validate
+        run: terraform validate -no-color
+ 
+      - name: Terraform Plan
+        run: terraform plan -no-color | tee plan.txt
+ 
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('Terra-prac/environments/dev/plan.txt', 'utf8');
+ 
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `
+              ### ✅ Terraform Plan (DEV)
+ 
+              \`\`\`
+              ${plan}
+              \`\`\`
+              `
+            });
+ 
+  # ==========================================================
+  # Terraform APPLY - Merge Execution
+  # ==========================================================
+  terraform-apply:
+    name: Terraform Apply (DEV)
+    runs-on: [self-hosted, linux]
+    needs: terraform-plan
+ 
+    # Apply runs ONLY after PR approval & merge to main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+ 
+    permissions:
+      contents: read
+      id-token: write
+ 
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+ 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+ 
+      - name: Terraform Init
+        run: terraform init
+ 
+      # NOTE:
+      # Auto-approve is acceptable here ONLY because this is DEV.
+      # Prod environments must use approval gates.
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -no-color

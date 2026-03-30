@@ -1,0 +1,48 @@
+terraform plan -var-file="dev.tfvars"
+terraform init -backend-config=../../global/backend/dev.backend.hcl -- simlar way for qa and prod
+client secret value -WOM8Q~7l7ff4t9pRbfOWGEGqfdDjIE461~UH4aDD
+
+Terra-prac/
+├── environments/
+│   ├── dev/
+│   ├── qa/
+│   └── prod/
+├── global/
+└── modules/
+
+
+modules/
+└── apim/
+    ├── main.tf
+    ├── variables.tf
+    └── outputs.tf
+
+Client Postman / App
+   
+   | 1. Gets JWT from Entra Apim-app-poc
+   |
+   | 2. Sends request with Authorization: Bearer <JWT>
+   v
+APIM Terraform
+   |
+   | ✅ validate-jwt policy
+   |
+   | ❌ reject if invalid
+   v
+Backend API ApyHub Form API
+
+
+promethus and grafana -- 
+   System / Server / App
+        ↓
+   Exporter Node Exporter / Windows Exporter
+        ↓
+     Prometheus collects & stores metrics
+        ↓
+      Grafana visualizes metrics
+
+      Why locals?
+locals are just calculated values inside Terraform to avoid repeating logic
+
+all values including secrets are usually passed via variables.tf + *.tfvars
+
