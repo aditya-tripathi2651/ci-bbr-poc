@@ -17,17 +17,17 @@ output "resource_group" {
   description = "The single RG used across the environment"
 }
 
-output "Apim_name" { value = module.Apim.apim_name }
-output "Apim_gateway_url" { value = module.Apim.gateway_url }
-output "Apim_sub_key" {
-  value     = module.Apim.subscription_primary_key
-  sensitive = true
-}
-# Root outputs that expose module outputs
+# output "Apim_name" { value = module.Apim.apim_name }
+# output "Apim_gateway_url" { value = module.Apim.gateway_url }
+# output "Apim_sub_key" {
+#   value     = module.Apim.subscription_primary_key
+#   sensitive = true
+# }
+# # Root outputs that expose module outputs
 
-output "Apim_subscription_key" {
-  value       = module.Apim.subscription_primary_key
-  sensitive   = true
-  description = "Primary subscription key for APIM product subscription"
-}
+# output "Apim_subscription_key" {
+#   value       = module.Apim.subscription_primary_key
+#   sensitive   = true
+#   description = "Primary subscription key for APIM product subscription"
+# }
 
