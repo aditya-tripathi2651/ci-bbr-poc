@@ -112,4 +112,4 @@ tags = { env = "dev", owner = "aditya" }
 # ACA currently uses a public image:
 public_image = "nginx:alpine"
   
-}
+}# trigger
