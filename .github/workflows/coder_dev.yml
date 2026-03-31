@@ -45,7 +45,7 @@ jobs:
   # ==========================================================
   terraform-plan:
     name: Terraform Plan (PR Validation)
-    runs-on: [self-hosted, linux]
+    runs-on: [ubuntu-latest]
 
     permissions:
       contents: read
@@ -79,7 +79,7 @@ jobs:
   # ==========================================================
   terraform-apply:
     name: Terraform Apply (DEV)
-    runs-on: [self-hosted, linux]
+    runs-on: [ubuntu-latest]
     needs: terraform-plan
 
     # Only apply on push to main (merge)
