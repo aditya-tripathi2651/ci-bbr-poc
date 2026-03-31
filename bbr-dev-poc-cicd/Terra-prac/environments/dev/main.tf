@@ -113,3 +113,4 @@ tags = { env = "dev", owner = "aditya" }
 public_image = "nginx:alpine"
   
 }# trigger
+# trigger
