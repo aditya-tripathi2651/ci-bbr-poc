@@ -1,91 +1,89 @@
 name: Terraform CI - Dev
 
-# ------------------------------------------------------------
-# Triggers
-# ------------------------------------------------------------
 on:
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
-  # Optional but strongly recommended for manual runs
-  workflow_dispatch:
-# ------------------------------------------------------------
-# Defaults
-# ------------------------------------------------------------
+    paths:
+      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
+  push:
+    branches: [ main ]
+    paths:
+      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
+  workflow_dispatch:   # manual debugging trigger (keep this)
+
 defaults:
   run:
     shell: bash
     working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev/
 
-# ------------------------------------------------------------
-# Permissions (OIDC)
-# ------------------------------------------------------------
 permissions:
   contents: read
-  id-token: write
-
-# ------------------------------------------------------------
-# Azure OIDC Environment
-# ------------------------------------------------------------
-env:
-  ARM_USE_OIDC: true
-  ARM_USE_AZUREAD: true
-  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  id-token: write   # required for OIDC
 
 jobs:
   terraform:
-    name: Terraform (Plan / Apply)
     runs-on: ubuntu-latest
 
     steps:
       # -------------------------
       # Checkout
       # -------------------------
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       # -------------------------
-      # Setup Terraform
+      # Terraform setup
       # -------------------------
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
 
       # -------------------------
       # Formatting (non-blocking)
       # -------------------------
-      - name: Terraform Format
-        run: terraform fmt -check || true
+      - run: terraform fmt -check || true
 
       # -------------------------
-      # Backend Init (REQUIRED)
+      # INIT (Plan – no Azure env, no secrets)
       # -------------------------
-      - name: Terraform Init (DEV backend)
+      - name: Terraform Init (PLAN)
+        if: github.event_name == 'pull_request'
         run: |
           terraform init \
             -backend-config=../../global/backend/dev.backend.hcl \
             -reconfigure
 
       # -------------------------
-      # Validation
-      # -------------------------
-      - name: Terraform Validate
-        run: terraform validate -no-color
-
-      # -------------------------
-      # PLAN (Pull Request only)
+      # PLAN
       # -------------------------
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
         run: terraform plan -no-color
 
       # -------------------------
-      # APPLY (Push to main only)
+      # INIT (Apply – WITH Azure OIDC env)
+      # -------------------------
+      - name: Terraform Init (APPLY)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ARM_USE_OIDC: true
+          ARM_USE_AZUREAD: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform init \
+            -backend-config=../../global/backend/dev.backend.hcl \
+            -reconfigure
+
+      # -------------------------
+      # APPLY
       # -------------------------
       - name: Terraform Apply
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          ARM_USE_OIDC: true
+          ARM_USE_AZUREAD: true
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform apply -auto-approve -no-color
