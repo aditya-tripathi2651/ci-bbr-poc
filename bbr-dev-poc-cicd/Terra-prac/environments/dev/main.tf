@@ -89,7 +89,7 @@ module "acr" {
   source = "../../modules/acr"
   acr_name            = "adityaacrdev01"        # must be globally unique + lowercase
   resource_group_name = "rg-adityatripathi-poc" # your existing RG
-  location            = "centralindia"
+  location            = "centralindia"        #location
   sku                 = "Basic"
   admin_enabled       = false
 }
