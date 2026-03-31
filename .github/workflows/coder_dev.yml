@@ -1,51 +1,70 @@
 name: Terraform CI - Dev
 
+# ------------------------------------------------------------
+# Triggers (STRICT + RELIABLE)
+# ------------------------------------------------------------
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
     paths:
       - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
-  workflow_dispatch:   # manual debugging trigger (keep this)
+  push:
+    branches:
+      - main
+    paths:
+      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
+  workflow_dispatch: {}
 
+# ------------------------------------------------------------
+# Defaults
+# ------------------------------------------------------------
 defaults:
   run:
     shell: bash
-    working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev/
+    working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev
 
+# ------------------------------------------------------------
+# Permissions (OIDC)
+# ------------------------------------------------------------
 permissions:
   contents: read
-  id-token: write   # required for OIDC
+  pull-requests: write
+  id-token: write
 
+# ------------------------------------------------------------
+# Jobs
+# ------------------------------------------------------------
 jobs:
   terraform:
+    name: Terraform Dev
     runs-on: ubuntu-latest
 
     steps:
       # -------------------------
       # Checkout
       # -------------------------
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       # -------------------------
-      # Terraform setup
+      # Terraform Setup
       # -------------------------
-      - uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
 
       # -------------------------
-      # Formatting (non-blocking)
+      # Terraform fmt
       # -------------------------
-      - run: terraform fmt -check || true
+      - name: Terraform fmt
+        run: terraform fmt -check || true
 
       # -------------------------
-      # INIT (Plan – no Azure env, no secrets)
+      # Terraform Init (PLAN phase)
       # -------------------------
-      - name: Terraform Init (PLAN)
+      - name: Terraform Init (Plan)
         if: github.event_name == 'pull_request'
         run: |
           terraform init \
@@ -53,16 +72,23 @@ jobs:
             -reconfigure
 
       # -------------------------
-      # PLAN
+      # Terraform Validate
+      # -------------------------
+      - name: Terraform Validate
+        if: github.event_name == 'pull_request'
+        run: terraform validate -no-color
+
+      # -------------------------
+      # Terraform Plan
       # -------------------------
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
         run: terraform plan -no-color
 
       # -------------------------
-      # INIT (Apply – WITH Azure OIDC env)
+      # Terraform Init (APPLY phase)
       # -------------------------
-      - name: Terraform Init (APPLY)
+      - name: Terraform Init (Apply)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           ARM_USE_OIDC: true
@@ -76,7 +102,7 @@ jobs:
             -reconfigure
 
       # -------------------------
-      # APPLY
+      # Terraform Apply
       # -------------------------
       - name: Terraform Apply
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -87,3 +113,9 @@ jobs:
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: terraform apply -auto-approve -no-color
+
+      # -------------------------
+      # Approval section (FOR FUTURE)
+      # -------------------------
+      # - name: Await approval
+      #   uses: some/manual-approval/action
