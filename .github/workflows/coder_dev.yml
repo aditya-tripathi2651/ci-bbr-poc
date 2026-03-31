@@ -1,121 +1,77 @@
 name: Terraform CI - Dev
 
-# ------------------------------------------------------------
-# Triggers (STRICT + RELIABLE)
-# ------------------------------------------------------------
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
     paths:
       - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
   push:
-    branches:
-      - main
+    branches: [ main ]
     paths:
       - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
-  workflow_dispatch: {}
+  workflow_dispatch:
 
-# ------------------------------------------------------------
-# Defaults
-# ------------------------------------------------------------
 defaults:
   run:
     shell: bash
-    working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev
+    working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev/
 
-# ------------------------------------------------------------
-# Permissions (OIDC)
-# ------------------------------------------------------------
 permissions:
   contents: read
-  pull-requests: write
   id-token: write
 
-# ------------------------------------------------------------
-# Jobs
-# ------------------------------------------------------------
 jobs:
-  terraform:
-    name: Terraform Dev
+  # ==========================================================
+  # PLAN (NO AZURE, NO BACKEND)
+  # ==========================================================
+  terraform-plan:
+    name: Terraform Plan
     runs-on: ubuntu-latest
 
     steps:
-      # -------------------------
-      # Checkout
-      # -------------------------
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # -------------------------
-      # Terraform Setup
-      # -------------------------
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
 
-      # -------------------------
-      # Terraform fmt
-      # -------------------------
-      - name: Terraform fmt
-        run: terraform fmt -check || true
+      - run: terraform fmt -check || true
 
-      # -------------------------
-      # Terraform Init (PLAN phase)
-      # -------------------------
-      - name: Terraform Init (Plan)
-        if: github.event_name == 'pull_request'
+      # ✅ IMPORTANT: disable backend entirely
+      - name: Terraform Init (No backend)
+        run: terraform init -backend=false
+
+      - run: terraform validate -no-color
+
+      - run: terraform plan -no-color
+
+  # ==========================================================
+  # APPLY (AZURE OIDC + BACKEND)
+  # ==========================================================
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    env:
+      ARM_USE_OIDC: true
+      ARM_USE_AZUREAD: true
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.0
+
+      - name: Terraform Init (Azure backend)
         run: |
           terraform init \
             -backend-config=../../global/backend/dev.backend.hcl \
             -reconfigure
 
-      # -------------------------
-      # Terraform Validate
-      # -------------------------
-      - name: Terraform Validate
-        if: github.event_name == 'pull_request'
-        run: terraform validate -no-color
-
-      # -------------------------
-      # Terraform Plan
-      # -------------------------
-      - name: Terraform Plan
-        if: github.event_name == 'pull_request'
-        run: terraform plan -no-color
-
-      # -------------------------
-      # Terraform Init (APPLY phase)
-      # -------------------------
-      - name: Terraform Init (Apply)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          ARM_USE_OIDC: true
-          ARM_USE_AZUREAD: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: |
-          terraform init \
-            -backend-config=../../global/backend/dev.backend.hcl \
-            -reconfigure
-
-      # -------------------------
-      # Terraform Apply
-      # -------------------------
-      - name: Terraform Apply
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          ARM_USE_OIDC: true
-          ARM_USE_AZUREAD: true
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        run: terraform apply -auto-approve -no-color
-
-      # -------------------------
-      # Approval section (FOR FUTURE)
-      # -------------------------
-      # - name: Await approval
-      #   uses: some/manual-approval/action
+      - run: terraform apply -auto-approve -no-color
