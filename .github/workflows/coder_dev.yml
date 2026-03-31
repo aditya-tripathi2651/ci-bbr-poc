@@ -74,26 +74,26 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -no-color | tee plan.txt
  
-      - name: Comment Plan on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync('Terra-prac/environments/dev/plan.txt', 'utf8');
+      # - name: Comment Plan on PR
+      #   if: github.event_name == 'pull_request'
+      #   uses: actions/github-script@v6
+      #   with:
+      #     script: |
+      #       const fs = require('fs');
+      #       const plan = fs.readFileSync('Terra-prac/environments/dev/plan.txt', 'utf8');
  
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `
-              ### Terraform Plan (DEV)
+      #       github.rest.issues.createComment({
+      #         issue_number: context.issue.number,
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         body: `
+      #         ### Terraform Plan (DEV)
  
-              \`\`\`
-              ${plan}
-              \`\`\`
-              `
-            });
+      #         \`\`\`
+      #         ${plan}
+      #         \`\`\`
+      #         `
+      #       });
  
   # ==========================================================
   # Terraform APPLY - Merge Execution
