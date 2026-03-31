@@ -1,11 +1,11 @@
 name: Terraform CI - Dev
 
 on:
-  pull_request:
+  push:
     branches: [ main ]
     paths:
       - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
-  push:
+  pull_request:
     branches: [ main ]
     paths:
       - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
