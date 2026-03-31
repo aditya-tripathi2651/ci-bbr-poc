@@ -14,12 +14,12 @@ on:
     branches:
       - main
     paths:
-      - Terra-prac/environments/dev/**
+      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
   push:
     branches:
       - main
     paths:
-      - Terra-prac/environments/dev/**
+      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
  
 # ------------------------------------------------------------
 # Azure authentication via OIDC
@@ -37,7 +37,7 @@ env:
 defaults:
   run:
     shell: bash
-    working-directory: Terra-prac/environments/dev/
+    working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev/
  
 jobs:
   # ==========================================================
