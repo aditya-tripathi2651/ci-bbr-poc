@@ -4,17 +4,12 @@ name: Terraform CI - Dev
 # Triggers
 # ------------------------------------------------------------
 on:
-  pull_request:
-    branches: [ main ]
-    paths:
-      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
   push:
     branches: [ main ]
-    paths:
-      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
+  pull_request:
+    branches: [ main ]
   # Optional but strongly recommended for manual runs
   workflow_dispatch:
-
 # ------------------------------------------------------------
 # Defaults
 # ------------------------------------------------------------
