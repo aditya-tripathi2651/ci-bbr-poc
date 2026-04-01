@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - Terra-prac/environments/dev/**
+      - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
   workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
+  id-token: write   # REQUIRED for OIDC
 
 env:
   ARM_USE_OIDC: true
@@ -22,7 +22,7 @@ env:
 defaults:
   run:
     shell: bash
-    working-directory: Terra-prac/environments/dev/
+    working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev/
 
 jobs:
   terraform:
@@ -30,9 +30,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # -------------------------
+      # Azure OIDC Authentication
+      # -------------------------
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
@@ -40,12 +43,15 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_BBR_IDENTITY_AND_MANAGEMENT }}
 
+      # -------------------------
+      # Terraform Setup
+      # -------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
 
-      - name: Terraform fmt
+      - name: Terraform Format
         run: terraform fmt -check || true
 
       - name: Terraform Init (DEV backend)
