@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - bbr-dev-poc-cicd/Terra-prac/environments/dev/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write   # REQUIRED for OIDC
 
 env:
   ARM_USE_OIDC: true
@@ -19,10 +24,6 @@ defaults:
     shell: bash
     working-directory: bbr-dev-poc-cicd/Terra-prac/environments/dev/
 
-permissions:
-  contents: read
-  id-token: write   # REQUIRED for OIDC
-
 jobs:
   terraform:
     name: Terraform Dev
@@ -32,7 +33,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ✅ REQUIRED: Exchange GitHub OIDC → Azure token
+      # ✅ CRITICAL STEP — DO NOT MOVE OR REMOVE
+      # This is what ACTUALLY performs OIDC authentication
       - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
